@@ -1,5 +1,5 @@
 from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score
@@ -41,5 +41,44 @@ print(f"Baseline XGBoost ACcuracy: {baseline_accuracy:.4f}")
 
 def objective(trial): 
     params = {
-        'n_estimators': trial
+        'n_estimators': trial.suggest_int('n_estimators', 50, 500), 
+        'max_depth': trial.suggest_int('max_depth', 3, 100), 
+        'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3), 
+        'subsample': trial.suggest_float('subsample', 0.6, 1.0), 
+        'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
+        'gamma': trial.suggest_float('gamma', 0, 5),
+        'reg_alpha': trial.suggest_float('reg_alpha', 0, 10),
+        'reg_lambda': trial.suggest_float('reg_lambda', 0, 10),
     }
+
+    # Train XGBoost model with suggested params 
+    model = XGBClassifier(eval_metric='logloss', ramdon_state=42, **params)
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_test)
+    return accuracy_score(y_test, preds)
+
+# Create optuna study 
+
+study = optuna.create_study(direction="maximize")
+study.optimize(objective, n_trials=50)
+
+# Best hypperparameters 
+print("Best HyperParameters: ", study.best_params)
+print("Best HyperParameters: ", study.best_value)
+
+
+param_grid = {
+    'n_estimators': [100, 200, 300], 
+    'max_depth': [3, 5, 7], 
+    'learing_rate': [0.01, 0.1, 0.2], 
+    'subsample': [0.6, 0.8, 1.0]
+}
+
+grid_search = GridSearchCV(
+    estimator=XGBClassifier(eval_metrics='logloss', random_state=42), 
+    param_grid=param_grid, 
+    scoring='accuracy', 
+    cv=3, 
+    verbose=1
+)
