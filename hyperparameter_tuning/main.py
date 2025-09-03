@@ -1,5 +1,5 @@
 from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score
@@ -63,7 +63,7 @@ def objective(trial):
 study = optuna.create_study(direction="maximize")
 study.optimize(objective, n_trials=50)
 
-# Best hypperparameters 
+# Best hyperparameters 
 print("Best HyperParameters: ", study.best_params)
 print("Best HyperParameters: ", study.best_value)
 
@@ -71,14 +71,49 @@ print("Best HyperParameters: ", study.best_value)
 param_grid = {
     'n_estimators': [100, 200, 300], 
     'max_depth': [3, 5, 7], 
-    'learing_rate': [0.01, 0.1, 0.2], 
+    'learning_rate': [0.01, 0.1, 0.2], 
     'subsample': [0.6, 0.8, 1.0]
 }
 
 grid_search = GridSearchCV(
-    estimator=XGBClassifier(eval_metrics='logloss', random_state=42), 
+    estimator=XGBClassifier(eval_metric='logloss', random_state=42), 
     param_grid=param_grid, 
     scoring='accuracy', 
     cv=3, 
     verbose=1
 )
+
+grid_search.fit(X_train, y_train)
+
+# Best paramters and accuracy
+print("Grid Search best paramters: ", grid_search.best_params_)
+print("Grid Search best Acurracy: ", grid_search.best_score_)
+
+
+
+param_dist = {
+    'n_estimators': [50, 100, 200, 300, 400], 
+    'max_depth': [3, 5, 7, 9], 
+    'learning_rate': [0.01, 0.05, 0.1, 0.2], 
+    'subsample': [0.6, 0.7, 0.8, 0.9, 1.0], 
+    'colsample_bytree': [0.6, 0.7, 0.8, 0.9, 1.0],
+}
+
+
+# trian XGooost with random search 
+
+random_search = RandomizedSearchCV(
+    estimator=XGBClassifier(eval_metric='logloss'), 
+    param_distributions = param_dist, 
+    n_iter=50, 
+    scoring='accuracy',
+    cv=3, 
+    verbose=1, 
+    random_state=42,
+)
+
+random_search.fit(X_train, y_train)
+
+
+print("\n\n\nRandom Search best parameters: ", random_search.best_params_)
+print("\n\n\nRandom Search best accuracy: ", random_search.best_score_)
